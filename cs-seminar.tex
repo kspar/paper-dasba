@@ -1,12 +1,18 @@
 \documentclass[article]{aaltoseries}
 \usepackage[utf8]{inputenc}
 
+\usepackage{color}  % For TODOs
+
+% TODOs, comment out second line to disable
+\newcommand{\todo}[1]{}
+\renewcommand{\todo}[1]{{\color{red} \textbf{TODO: {#1}}}}
+
 
 \begin{document}
  
 %=========================================================
 
-\title{Title of the seminar paper}
+\title{Defence Against Authentication Server Breach Attacks}
 
 \author{Kaspar Papli
 \\\textnormal{\texttt{kaspar.papli@aalto.fi}}}
@@ -31,28 +37,23 @@ To be added.
 
 \section{Introduction}
 
-To be added.
+User authentication over the internet is traditionally done using secret user credentials, such as a username and password or password hash. In order to authenticate, the client sends the credentials to a remote server where they are validated and exchanged for a long-term access token. This approach requires every application server that wishes to authenticate users, to store the users' credentials in order to validate them.
+
+Recently, an approach has become popular where credential storage and validation is delegated to a dedicated authentication server or \textit{identity provider} (IdP). In order to authenticate to an application server, the client exchanges the user's credentials for a token via an IdP and sends this token to the application server. The authenticity and purpose of the token can then be validated by the application server using cryptographic measures.
+
+In this approach, the sensitive user credentials are handled only by the IdP. Additionally, single sign-on features can be implemented if one IdP provides authentication for several application servers. This kind of federated identity management is greatly facilitated by open protocols such as OAuth2 \cite{oauth2} and OpenID Connect \cite{oidc}.
+
+One of the main security concerns related to dedicated identity providers is the risk of server breach wherein an attacker gains access to an authentication server. On the compromised server, the attacker may be able to forge arbitrary tokens and sniff user credentials to mount offline cracking attacks on them.
+
+To counter the risk of server breach, a solution was proposed by Agrawal et al.~\cite{pasta} utilizing threshold cryptography. In the proposed \textit{PASsword-based Threshold Authentication} (PASTA) framework, the identity provider role is distributed among $n$ servers such that any $t$ of them can collectively validate credentials and issue tokens. However, the compromise of any $t-1$ servers does not enable an attacker to forge tokens or mount offline cracking attacks on user credentials.
+
+We analyze and evaluate PASTA in terms of practical adaptability, usability and security guarantees. \todo{Elaborate and also compare with other solutions.}
+
+\todo{More/different solutions}
+
+In Chapter 1, we introduce ...
 
 
-%============================================================
-
-
-\section{TODO}
-
-TODO
-
-%------------------------------------------------------------
-
-
-\subsection{TODO}
-\label{sec:TODO}
-
-
-
-
-\section{Conclusion}
-
-To be added.
 
 
 
