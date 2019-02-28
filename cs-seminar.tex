@@ -37,25 +37,108 @@ To be added.
 
 \section{Introduction}
 
-User authentication over the internet is traditionally done using secret user credentials, such as a username and password or password hash. In order to authenticate, the client sends the credentials to a remote server where they are validated and exchanged for a long-term access token. This approach requires every application server that wishes to authenticate users, to store the users' credentials in order to validate them.
+Users are traditionally authenticated over the internet using secret user credentials, such as a username and password or password hash. In order to authenticate, the client sends the credentials to a remote server where they are validated and exchanged for a long-term access token. This approach requires every application server that wishes to authenticate users, to store the users' credentials in order to validate them.
 
-Recently, an approach has become popular where credential storage and validation is delegated to a dedicated authentication server or \textit{identity provider} (IdP). In order to authenticate to an application server, the client exchanges the user's credentials for a token via an IdP and sends this token to the application server. The authenticity and purpose of the token can then be validated by the application server using cryptographic measures.
+Recently, an approach has become popular where credential storage and validation is delegated to a dedicated authentication server or \textit{identity provider} (IdP). In order to authenticate to an application, the client exchanges the user's credentials for a token via an IdP and sends this token to the application. The authenticity and purpose of the token can then be validated by the application using cryptographic measures or by delegating the validation to the IdP.
 
-In this approach, the sensitive user credentials are handled only by the IdP. Additionally, single sign-on features can be implemented if one IdP provides authentication for several application servers. This kind of federated identity management is greatly facilitated by open protocols such as OAuth2 \cite{oauth2} and OpenID Connect \cite{oidc}.
+In this approach, the sensitive user credentials are handled only by the IdP. Additionally, single sign-on features can be implemented if one IdP provides authentication for several applications. This kind of federated identity management is greatly facilitated by open protocols such as OAuth2 \cite{oauth2} and OpenID Connect \cite{oidc}.
 
-One of the main security concerns related to dedicated identity providers is the risk of server breach wherein an attacker gains access to an authentication server. On the compromised server, the attacker may be able to forge arbitrary tokens and sniff user credentials to mount offline cracking attacks on them.
+One of the main security concerns related to dedicated identity providers is the risk of authentication server breach wherein an attacker gains unauthorized access to an authentication server. On the compromised server, the attacker may be able to forge arbitrary tokens to impersonate users to applications and retrieve or sniff user credentials. 
 
-To counter the risk of server breach, a solution was proposed by Agrawal et al.~\cite{pasta} utilizing threshold cryptography. In the proposed \textit{PASsword-based Threshold Authentication} (PASTA) framework, the identity provider role is distributed among $n$ servers such that any $t$ of them can collectively validate credentials and issue tokens. However, the compromise of any $t-1$ servers does not enable an attacker to forge tokens or mount offline cracking attacks on user credentials.
+Defense against the compromise of user credentials during a server breach is a widely studied topic. Several different remedies have been widely adopted, such as password hashing, salting and employing memory-hard functions~\cite{argon2}. \todo{Add more sources if possible.} Due to the nature of human-picked passwords, they often contain low entropy and are vulnerable to dictionary attacks~\cite{wangdictattack}. These traditional remedies make recovering plaintext user credentials more difficult or expensive for the attacker but do not solve the underlying problem: the trust put into one authentication server is fragile.
 
-We analyze and evaluate PASTA in terms of practical adaptability, usability and security guarantees. \todo{Elaborate and also compare with other solutions.}
+Recently, several methods have been introduced that utilize more than one authentication server such that compromising a certain subset of the servers will not enable the attacker to recover user credentials or forge authentication tokens.
 
-\todo{More/different solutions}
+The aim of this paper is to review and compare three recently proposed protocols for multi-server identity providers and to provide directions for further research in the area. The reviewed protocols are Threshold Oblivious Password-Protected Secret Sharing (TOPPSS)~\cite{toppss}, Anonymous-Verifying Threshold Password Authentication (AVTPA)~\cite{avtpa} and Password-Based Threshold Authentication (PASTA)~\cite{pasta}. 
 
-In Chapter 1, we introduce ...
-
-
+We start by listing required or desirable properties for the protocols and criteria for comparison in Chapter~\ref{sec:criteria}. In Chapter~\ref{sec:solutions} we review and summarize the three protocols and in Chapter~\ref{sec:comparison} we present a comparison of the protocols in terms of the listed criteria, including security guarantees, performance and usability. We conclude with suggestions for further research in Chapter~\ref{sec:conclusion}.
 
 
+\section{Requirements and Criteria}
+\label{sec:criteria}
+
+\subsection{Security Properties}
+
+We mainly focus on the protocols' resistance to two threats for authentication servers: offline password cracking and authentication token forging.
+
+\subsubsection{Offline Password Cracking}
+
+When using a single-server identity provider, the server must store some information about the users' credentials in order to verify them. In order to make recovering plain user credentials more difficult in case of server breach, this verifying information is traditionally a salted hash of the user's password for every user. In case of server breach, the attacker gains access to hashes of the users' passwords. This enables her to perform offline cracking attacks on the passwords.
+
+In a multi-server setting, the compromise of one server or a certain subset of servers should not enable the attacker to mount offline cracking attacks on the passwords using the recovered verifying data. More strongly, the verifying data should not reveal any information about the password, even if combined with verifying data recovered from other servers within the subset of compromised servers.
+
+
+\subsubsection{Token Forging}
+
+A single-server identity provider issues authentication tokens in response to valid user credentials. The tokens can contain identifying information about the user and client and are usually accompanied by a digital signature by a digital signature or a message authentication code (MAC). \todo{Cite standards/implementations: oidc, keycloak?, ...} \todo{List?} The digital signature is constructed using the authentication server's private key and can be verified by any client or user using the server's public key. In case of a MAC, the authentication server and client have a pre-shared key that is used by the server to create the MAC and by the client to verify it.
+
+In both cases, the authentication server must contain some secret information, which, if recovered by the attacker, can be used to forge arbitrary authentication tokens. This enables the attacker to impersonate any user to any application.
+
+In a multi-server identity provider, the compromise of a certain subset of servers should not enable the attacker to forge tokens. 
+
+
+\subsection{Performance and Cost}
+
+In all reviewed multi-server identity provider protocols, there is a performance penalty when compared to their single-server counterparts. In some cases, this penalty is inherent - when more steps or more round-trips must be completed. The penalty might also arise from worst-case dependency. For example, when a client makes requests to $n$ servers in parallel and needs to wait for all of them to complete, then the average waiting time is shortest when $n=1$ and is longer if $n$ is larger. The performance is measured and compared in terms of the time required to successfully complete a sign-on compared to its single-server counterpart. \todo{Registration as well?} 
+
+One factor that increases cost for multi-server IdPs compared to single-server implementations is server allocation and maintenance. If a method requires more authentication servers then the cost of allocating the necessary hardware and maintaining the servers is higher.
+
+For businesses, the ultimate cost of having customers use a multi-server IdP might also be influenced by the performance of the system. If the response time of the system is slower or reliability is lower then this could negatively impact their customers' behaviour.
+
+\subsection{Usability}
+
+\todo{Maybe tomorrow.}
+
+
+\section{Overview of the Protocols}
+\label{sec:solutions}
+
+In this section we present an overview of each of the reviewed protocols. We concentrate on the high-level architecture, requirements and limitations of these protocols.
+
+\subsection{Threshold Oblivious Password-Protected Secret Sharing (TOPPSS)}
+
+\todo{Text.}
+* Is a threshold PPSS scheme, enables a client to share an arbitrary secret between n servers, can be reconstructed with t servers + password.
+* Currently most efficient PPSS.
+* PKI required only for init, useful later as well.
+* How to implement an IdP from it.
+* Credentials secure against t-1 breach.
+* Does not deal with protecting token generation/forgery.
+
+
+\subsection{Anonymous-Verifying Threshold Password Authentication (AVTPA)}
+
+\todo{Text.}
+* Hierarchical server model.
+* Note also that backend servers are not publicly available over the internet, thus server breaches to them are more difficult.
+* Credentials secure against t-1 backend breach. Not secure against login server breach.
+* Light on client computation.
+
+
+\subsection{Password-Based Threshold Authentication (PASTA)}
+
+\todo{Text.}
+* Non-hierarchical server model.
+* Credentials and token generation secure against t-1 breaches.
+* No server-server communication.
+* Two-round sign-on.
+* Figure of sign-on flow.
+
+
+\section{Comparison and Discussion}
+\label{sec:comparison}
+
+\subsection{Security Properties}
+
+\subsection{Performance}
+
+\subsection{Usability}
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\todo{Sorry for the incompleteness, opponent. Please contact me for clarification if necessary.}
 
 %============================================================
 
